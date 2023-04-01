@@ -1,0 +1,66 @@
+#!/bin/env bash
+
+# Very raw implementation of litterbox api in bash
+# also available: https://gist.github.com/bashl/e883b978780909a2d76e0ad4cd9e0550
+
+helpMenu(){
+cat << EOF
+	LitterBox API Bash implementation
+	Commands:
+	-h, --help		- Shows this message
+
+	Usage:
+	litterbox -t 1h -f scrot.png
+	Available times to select is <1h,12h,24h,72h>
+EOF
+}
+
+checkCurl(){
+	curl=`curl --version &>/dev/null`
+	[ "$?" -ne 0 ] && echo "Curl is not installed" && exit
+}
+
+litter_url="https://litterbox.catbox.moe/resources/internals/api.php"
+
+if [ "$1" = "-h" ] || [ "$1" = "--help" ]
+then
+	helpMenu
+
+elif [ "$1" = "-t" ] && [ "$3" = "-f" ]
+then
+	# if curl is not installed the script will quit
+	checkCurl
+	# if the user don't provide a file throws an error
+	[ -z "$4" ] && echo -en "You didn't selected a \e[1mfile\n" && exit
+	# if the file doens't exist throws an error
+	[ -f "$4" ] || echo -en "File doesn't exist\n" || exit
+	# if the user don't provide "h" in the end of the time argument, the script will do
+	timer_var="$2"
+	[ "$timer_var" -ge 0 ] 2>/dev/null && timer_var="$timer_var"h
+
+	up=`curl -F "reqtype=fileupload" -F "time=$timer_var" -F "fileToUpload=@$4" "$litter_url"`
+	echo -en "\n"
+	echo -en "Uploaded to: \e[1m$up and will be available for $timer_var\n"
+	echo -en "The link will be in your clipboard if you have xclip installed\n"
+	echo $up|xclip -sel clip
+
+# if a time is not provide, it will use the default: 12h
+elif [ "$1" = "-f" ]
+then
+	# if curl is not installed the script will quit
+	checkCurl
+	# if the user don't provide a file throws an error
+	[ -z "$2" ] && echo -en "You didn't selected a \e[1mfile\n" && exit
+	# if the file doens't exist throws an error
+	[ -f "$2" ] || echo -en "File doens't exit\n" || exit
+	
+	echo -en "Uploading using the default time: 12h\n"
+	up=`curl -F "reqtype=fileupload" -F "time=12h" -F "fileToUpload=@$2" "$litter_url"`
+	echo -en "\n"
+	echo -en "Uploaded to: \e[1m$up and will be available for 12h\n"
+	echo -en "The link will be in your clipboard if you have xclip installed\n"
+	echo $up|xclip -sel clip
+
+else
+	helpMenu
+fi

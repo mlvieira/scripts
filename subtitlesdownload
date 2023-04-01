@@ -1,0 +1,9 @@
+#!/bin/bash
+
+# this script needs subliminal 
+# downloads subtitles for all video in a folder, if you have another format just add
+# before like "*.mkv *.mp4 *.avi".
+
+for video in *.mkv *.mp4; do
+  subliminal --opensubtitles  OpenSubsUser OpenSubsPassword download --language en "$video"
+done

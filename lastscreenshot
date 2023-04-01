@@ -1,0 +1,23 @@
+#!/bin/env sh
+
+folder="$HOME/screenshots/"
+
+lastFile=$(ls -t1 $folder |  head -n 1)
+
+gambiarraBraba="${folder}${lastFile}"
+
+# litter box - temporary 1 hour(if you want more, just change 1h to 12h 24h or 72h
+curlUrl=$(curl -F "reqtype=fileupload" -F "time=1h" -F "fileToUpload=@${gambiarraBraba}" https://litterbox.catbox.moe/resources/internals/api.php)
+
+
+# catbox - "forever"
+#curlUrl=$(curl -F "reqtype=fileupload" -F "fileToUpload=@${gambiarraBraba}" https://catbox.moe/user/api.php)
+
+
+if [ "$?" -eq "0" ];
+then
+	echo $curlUrl|xclip -sel clip
+	notify-send "Uploaded of screenshot: ${lastFile} was successfully"
+else
+	notify-send "Something went wrong when uploading your screenshot"
+fi
