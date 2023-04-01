@@ -1,7 +1,6 @@
 #!/bin/env bash
 
 # Very raw implementation of litterbox api in bash
-# also available: https://gist.github.com/bashl/e883b978780909a2d76e0ad4cd9e0550
 
 helpMenu(){
 cat << EOF
