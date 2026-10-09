@@ -1,0 +1,61 @@
+#!/bin/bash
+
+# Usage: ./clip.sh -i input.mkv -s 00:38:56 -e 00:41:00 [-o output_path.mp4] [-u] [-l]
+# -o: Output file path/name (optional, defaults to wa_<input>.mp4)
+# -u: Embed subtitle (stream 0)
+# -l: Remove letterboxing (auto-detect)
+
+EMBED_SUB=0
+REMOVE_LB=0
+
+while getopts "i:s:e:o:ul" opt; do
+  case $opt in
+    i) INPUT="$OPTARG" ;;
+    s) START="$OPTARG" ;;
+    e) END="$OPTARG" ;;
+    o) OUTPUT="$OPTARG" ;;
+    u) EMBED_SUB=1 ;;
+    l) REMOVE_LB=1 ;;
+    *) echo "Usage: $0 -i input.mkv -s start -e end [-o output.mp4] [-u] [-l]" >&2; exit 1 ;;
+  esac
+done
+
+if [ -z "$INPUT" ] || [ -z "$START" ] || [ -z "$END" ]; then
+    echo "Error: Missing required arguments."
+    echo "Usage: $0 -i input.mkv -s start -e end [-o output.mp4] [-u] [-l]" >&2
+    exit 1
+fi
+
+# Fallback output name if -o is not provided
+if [ -z "$OUTPUT" ]; then
+    OUTPUT="wa_${INPUT%.*}.mp4"
+fi
+
+VF_CHAIN=""
+
+if [ "$REMOVE_LB" -eq 1 ]; then
+    echo "Detecting crop values..."
+    CROP=$(ffmpeg -ss "$START" -i "$INPUT" -t 2 -vf cropdetect -f null - 2>&1 | awk -F'crop=' '/crop=/ {print "crop=" $2}' | tail -1)
+    [ -n "$CROP" ] && VF_CHAIN="${CROP},"
+fi
+
+if [ "$EMBED_SUB" -eq 1 ]; then
+    echo "Extracting subtitles..."
+    TEMP_SUB="temp_$$.srt"
+    ffmpeg -y -ss "$START" -to "$END" -i "$INPUT" -map 0:s:0 "$TEMP_SUB" 
+fi
+
+VF_CHAIN="${VF_CHAIN}scale=-2:720"
+
+if [ "$EMBED_SUB" -eq 1 ]; then
+    VF_CHAIN="${VF_CHAIN},subtitles=${TEMP_SUB}"
+fi
+
+echo "Encoding to $OUTPUT..."
+ffmpeg -y -ss "$START" -to "$END" -i "$INPUT" -vf "$VF_CHAIN" -c:v libx264 -crf 28 -preset slower -pix_fmt yuv420p -c:a aac -b:a 128k "$OUTPUT"
+
+if [ "$EMBED_SUB" -eq 1 ]; then
+    rm -f "$TEMP_SUB"
+fi
+
+echo "Done: $OUTPUT"
